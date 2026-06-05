@@ -1,4 +1,4 @@
-import { openai } from "@/lib/openai";
+import { getOpenAI } from "@/lib/openai";
 import { SYSTEM_PROMPT_EN } from "./script-en";
 import { SYSTEM_PROMPT_ES } from "./script-es";
 
@@ -76,7 +76,7 @@ export async function processMessage(
     })),
   ];
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: "gpt-4o",
     messages,
     temperature: 0.7,
@@ -100,7 +100,7 @@ Conversation:
 ${updated.transcript.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join("\n")}
   `;
 
-  const extraction = await openai.chat.completions.create({
+  const extraction = await getOpenAI().chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{ role: "user", content: extractionPrompt }],
     response_format: { type: "json_object" },
@@ -138,7 +138,7 @@ export async function generateAiSummary(
 ): Promise<string> {
   const prompt = `Summarize this customer inquiry for ${businessName} in 2 sentences. Include job type, urgency, and any key details. Be concise.\n\nConversation:\n${conversation.transcript.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join("\n")}`;
 
-  const result = await openai.chat.completions.create({
+  const result = await getOpenAI().chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{ role: "user", content: prompt }],
     temperature: 0.3,
