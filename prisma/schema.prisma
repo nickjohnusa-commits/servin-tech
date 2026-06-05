@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Organization {
+  id                   String             @id @default(cuid())
+  clerkOrgId           String             @unique
+  name                 String
+  slug                 String             @unique
+  businessName         String
+  timezone             String             @default("America/New_York")
+  twilioPhoneNumber    String?            @unique
+  twilioPhoneSid       String?
+  defaultLanguage      Language           @default(AUTO)
+  subscriptionStatus   SubscriptionStatus @default(TRIALING)
+  subscriptionTier     SubscriptionTier   @default(STARTER)
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?
+  notificationEmails   String[]           @default([])
+  notificationPhones   String[]           @default([])
+  aiGreetingEn         String?
+  aiGreetingEs         String?
+  followUpEnabled      Boolean            @default(true)
+  followUpDays         Int[]              @default([1, 3, 7])
+  testMode             Boolean            @default(true)
+  onboardingComplete   Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  users         User[]
+  leads         Lead[]
+  conversations Conversation[]
+  followUps     FollowUp[]
+  reports       MonthlyReport[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  clerkUserId    String   @unique
+  organizationId String
+  role           UserRole @default(DISPATCHER)
+  name           String
+  email          String
+  phone          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("users")
+}
+
+model Lead {
+  id                   String     @id @default(cuid())
+  organizationId       String
+  callerPhone          String
+  callerName           String?
+  channel              Channel    @default(VOICE)
+  languageDetected     Language   @default(AUTO)
+  jobType              String?
+  urgency              Int?
+  address              String?
+  budgetRange          String?
+  preferredAppointment String?
+  status               LeadStatus @default(NEW)
+  aiSummary            String?    @db.Text
+  photoUrls            String[]   @default([])
+  notes                String?    @db.Text
+  testLead             Boolean    @default(false)
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  deletedAt            DateTime?
+
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+  followUps     FollowUp[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("leads")
+}
+
+model Conversation {
+  id             String   @id @default(cuid())
+  leadId         String
+  organizationId String
+  channel        Channel  @default(VOICE)
+  transcript     Json
+  durationSecs   Int?
+  callSid        String?  @unique
+  messageSid     String?
+  createdAt      DateTime @default(now())
+
+  lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([organizationId])
+  @@map("conversations")
+}
+
+model FollowUp {
+  id             String         @id @default(cuid())
+  leadId         String
+  organizationId String
+  type           NotifType      @default(SMS)
+  message        String         @db.Text
+  status         FollowUpStatus @default(PENDING)
+  scheduledAt    DateTime
+  sentAt         DateTime?
+  error          String?
+  createdAt      DateTime       @default(now())
+
+  lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([scheduledAt, status])
+  @@index([organizationId])
+  @@map("follow_ups")
+}
+
+model MonthlyReport {
+  id             String    @id @default(cuid())
+  organizationId String
+  month          Int
+  year           Int
+  data           Json
+  emailSentAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, month, year])
+  @@map("monthly_reports")
+}
+
+enum Language {
+  EN
+  ES
+  AUTO
+}
+
+enum Channel {
+  VOICE
+  SMS
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  ESTIMATE_SCHEDULED
+  ESTIMATE_SENT
+  WON
+  LOST
+}
+
+enum UserRole {
+  OWNER
+  DISPATCHER
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  PAUSED
+}
+
+enum SubscriptionTier {
+  STARTER
+  PROFESSIONAL
+  AGENCY
+}
+
+enum NotifType {
+  SMS
+  EMAIL
+}
+
+enum FollowUpStatus {
+  PENDING
+  SENT
+  FAILED
+  CANCELED
+}
