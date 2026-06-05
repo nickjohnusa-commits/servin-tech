@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { stripe, PLANS } from "@/lib/stripe/client";
+import { getStripe, PLANS } from "@/lib/stripe/client";
 import Link from "next/link";
 
 export default async function SettingsBillingPage() {
@@ -14,7 +14,7 @@ export default async function SettingsBillingPage() {
   let portalUrl: string | null = null;
   if (org.stripeCustomerId) {
     try {
-      const session = await stripe.billingPortal.sessions.create({
+      const session = await getStripe().billingPortal.sessions.create({
         customer: org.stripeCustomerId,
         return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/billing`,
       });

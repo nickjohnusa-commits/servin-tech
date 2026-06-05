@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { stripe, PLANS } from "@/lib/stripe/client";
+import { getStripe, PLANS } from "@/lib/stripe/client";
 import { z } from "zod";
 
 const schema = z.object({
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   let customerId = org.stripeCustomerId;
   if (!customerId) {
     const user = await db.user.findFirst({ where: { organizationId: org.id, role: "OWNER" } });
-    const customer = await stripe.customers.create({
+    const customer = await getStripe().customers.create({
       name: org.businessName,
       email: user?.email,
       metadata: { orgId: org.id, clerkOrgId: orgId },
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await getStripe().checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
     line_items: [{ price: plan.priceId, quantity: 1 }],
