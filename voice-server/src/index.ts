@@ -1,11 +1,24 @@
+import { createServer, IncomingMessage, ServerResponse } from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import { IncomingMessage } from "http";
 import { StreamHandler } from "./stream-handler";
 
 const PORT = parseInt(process.env.PORT ?? "8080", 10);
-const wss = new WebSocketServer({ port: PORT });
 
-console.log(`[voice-server] WebSocket server started on port ${PORT}`);
+const server = createServer((req: IncomingMessage, res: ServerResponse) => {
+  if (req.url === "/" || req.url === "/health") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ status: "ok", service: "servin-tech-voice" }));
+  } else {
+    res.writeHead(404);
+    res.end();
+  }
+});
+
+const wss = new WebSocketServer({ server });
+
+server.listen(PORT, () => {
+  console.log(`[voice-server] Listening on port ${PORT}`);
+});
 
 wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
