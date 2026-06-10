@@ -48,9 +48,10 @@ next-env.d.ts
 playwright-report/
 test-results/
 
-# prisma
-prisma/migrations/
+# prisma (migrations must be committed — they are the source of truth for schema)
 
 # Python (audit)
 __pycache__
 .venv
+
+.vercel
