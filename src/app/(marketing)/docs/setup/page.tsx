@@ -33,7 +33,16 @@ export default function SetupGuidePage() {
                   <tr key={svc} className="border-t border-[#e2e8f0]">
                     <td className="px-4 py-2.5 font-medium text-[#0f172a]">{svc}</td>
                     <td className="px-4 py-2.5 text-[#64748b]">{purpose}</td>
-                    <td className="px-4 py-2.5 text-[#2563eb] text-xs">{url}</td>
+                    <td className="px-4 py-2.5 text-xs">
+                      <a
+                        href={`https://${url}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#2563eb] hover:underline"
+                      >
+                        {url}
+                      </a>
+                    </td>
                   </tr>
                 ))}
               </tbody>
