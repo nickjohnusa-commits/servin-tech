@@ -21,6 +21,7 @@ export const t = {
     },
     trades: {
       label: "Built for",
+      items: ["HVAC", "Plumbing", "Roofing", "Electrical", "Pest Control", "Landscaping", "Construction", "Cleaning"],
     },
     howItWorks: {
       h2: "How it works",
@@ -70,6 +71,7 @@ export const t = {
     },
     trades: {
       label: "Diseñado para",
+      items: ["HVAC", "Plomería", "Techos", "Electricidad", "Control de Plagas", "Jardinería", "Construcción", "Limpieza"],
     },
     howItWorks: {
       h2: "Cómo funciona",

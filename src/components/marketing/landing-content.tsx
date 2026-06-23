@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useLang } from "./language-provider";
 import { t } from "@/lib/i18n";
 
-const TRADES = ["HVAC", "Plumbing", "Roofing", "Electrical", "Pest Control", "Landscaping"];
-
 export function LandingContent() {
   const { lang } = useLang();
   const tx = t[lang];
@@ -42,7 +40,7 @@ export function LandingContent() {
           <span className="text-xs text-[#94a3b8] font-medium uppercase tracking-wide">
             {tx.trades.label}
           </span>
-          {TRADES.map((trade) => (
+          {tx.trades.items.map((trade) => (
             <span key={trade} className="text-sm text-[#64748b] font-medium">{trade}</span>
           ))}
         </div>
