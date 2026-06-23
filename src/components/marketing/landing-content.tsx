@@ -50,19 +50,34 @@ export function LandingContent() {
 
       {/* How it works */}
       <section className="py-16 px-6 bg-[#f8fafc]">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl font-bold text-[#0f172a] text-center mb-2">{tx.howItWorks.h2}</h2>
           <p className="text-sm text-[#64748b] text-center mb-10">{tx.howItWorks.sub}</p>
-          <div className="grid md:grid-cols-3 gap-6">
-            {tx.howItWorks.steps.map((step, i) => (
-              <div key={i} className="bg-white border border-[#e2e8f0] rounded-xl p-6">
-                <div className="w-8 h-8 rounded-full bg-[#1b3a6b] text-white flex items-center justify-center text-sm font-bold mb-3">
-                  {i + 1}
+          <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6">
+            {tx.howItWorks.steps.map((step, i) => {
+              const isFirst = i === 0;
+              const card = (
+                <div className={`bg-white border rounded-xl p-6 h-full transition-colors ${isFirst ? "border-[#1b3a6b] hover:bg-[#f0f4ff]" : "border-[#e2e8f0]"}`}>
+                  <div className="w-8 h-8 rounded-full bg-[#1b3a6b] text-white flex items-center justify-center text-sm font-bold mb-3">
+                    {i + 1}
+                  </div>
+                  <h3 className="text-sm font-semibold text-[#0f172a] mb-1.5">{step.title}</h3>
+                  <p className="text-xs text-[#64748b] leading-relaxed">{step.desc}</p>
+                  {isFirst && (
+                    <span className="inline-block mt-3 text-xs text-[#1b3a6b] font-medium">
+                      {lang === "es" ? "Ver Guía →" : "View Docs →"}
+                    </span>
+                  )}
                 </div>
-                <h3 className="text-sm font-semibold text-[#0f172a] mb-1.5">{step.title}</h3>
-                <p className="text-xs text-[#64748b] leading-relaxed">{step.desc}</p>
-              </div>
-            ))}
+              );
+              return isFirst ? (
+                <Link key={i} href="/docs/setup" className="block h-full">
+                  {card}
+                </Link>
+              ) : (
+                <div key={i} className="h-full">{card}</div>
+              );
+            })}
           </div>
         </div>
       </section>

@@ -26,6 +26,7 @@ export const t = {
       h2: "How it works",
       sub: "Set up in 5 minutes. Live the same day.",
       steps: [
+        { title: "Before you start", desc: "Create free accounts for each service listed in the Docs section. You'll collect your API keys there — it takes about 10 minutes." },
         { title: "Get your AI number", desc: "We provision a local phone number. Customers call or text it — or forward your existing number to it." },
         { title: "AI qualifies every lead", desc: "Your AI receptionist answers, collects 6 key details, and asks for photos — in English or Spanish." },
         { title: "You close more jobs", desc: "You get an instant alert with the full lead. Estimates that don't convert get followed up automatically." },
@@ -74,6 +75,7 @@ export const t = {
       h2: "Cómo funciona",
       sub: "Configúralo en 5 minutos. En vivo el mismo día.",
       steps: [
+        { title: "Antes de comenzar", desc: "Crea cuentas gratuitas en cada servicio listado en la sección de Guía. Recopilarás tus claves API allí — toma unos 10 minutos." },
         { title: "Obtén tu número con IA", desc: "Te asignamos un número local. Los clientes llaman o escriben — o redirige tu número actual." },
         { title: "La IA califica cada prospecto", desc: "Tu recepcionista responde, recopila 6 datos clave y solicita fotos — en inglés o español." },
         { title: "Tú cierras más trabajos", desc: "Recibes una alerta inmediata con el prospecto completo. Las cotizaciones pendientes reciben seguimiento automático." },
