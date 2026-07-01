@@ -51,47 +51,56 @@ export async function POST(req: Request) {
     aiSummary,
   } = parsed.data;
 
-  const org = await db.organization.findUnique({ where: { id: orgId } });
-  if (!org) return NextResponse.json({ error: "Org not found" }, { status: 404 });
+  try {
+    const org = await db.organization.findUnique({ where: { id: orgId } });
+    if (!org) return NextResponse.json({ error: "Org not found" }, { status: 404 });
 
-  // Avoid duplicate leads from the same call
-  const existing = await db.conversation.findUnique({ where: { callSid } });
-  if (existing) {
-    return NextResponse.json({ leadId: existing.leadId, duplicate: true });
+    // Avoid duplicate leads from the same call
+    const existing = await db.conversation.findUnique({ where: { callSid } });
+    if (existing) {
+      return NextResponse.json({ leadId: existing.leadId, duplicate: true });
+    }
+
+    const lead = await db.$transaction(async (tx) => {
+      const newLead = await tx.lead.create({
+        data: {
+          organizationId: orgId,
+          callerPhone,
+          callerName,
+          channel: "VOICE",
+          languageDetected,
+          jobType: qualificationData.jobType,
+          urgency: qualificationData.urgency,
+          address: qualificationData.address,
+          budgetRange: qualificationData.budgetRange,
+          preferredAppointment: qualificationData.preferredAppointment,
+          aiSummary,
+          testLead: org.testMode,
+        },
+      });
+
+      await tx.conversation.create({
+        data: {
+          leadId: newLead.id,
+          organizationId: orgId,
+          channel: "VOICE",
+          transcript,
+          durationSecs,
+          callSid,
+        },
+      });
+
+      return newLead;
+    });
+
+    await inngest.send({
+      name: "lead/created",
+      data: { leadId: lead.id, organizationId: orgId },
+    });
+
+    return NextResponse.json({ leadId: lead.id });
+  } catch (err) {
+    console.error("[call-complete] error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  const lead = await db.lead.create({
-    data: {
-      organizationId: orgId,
-      callerPhone,
-      callerName,
-      channel: "VOICE",
-      languageDetected,
-      jobType: qualificationData.jobType,
-      urgency: qualificationData.urgency,
-      address: qualificationData.address,
-      budgetRange: qualificationData.budgetRange,
-      preferredAppointment: qualificationData.preferredAppointment,
-      aiSummary,
-      testLead: org.testMode,
-    },
-  });
-
-  await db.conversation.create({
-    data: {
-      leadId: lead.id,
-      organizationId: orgId,
-      channel: "VOICE",
-      transcript,
-      durationSecs,
-      callSid,
-    },
-  });
-
-  await inngest.send({
-    name: "lead/created",
-    data: { leadId: lead.id, organizationId: orgId },
-  });
-
-  return NextResponse.json({ leadId: lead.id });
 }

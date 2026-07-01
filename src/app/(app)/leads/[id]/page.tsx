@@ -3,9 +3,19 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { formatDate, formatPhone, urgencyColor, urgencyLabel } from "@/lib/utils";
 import { LanguageBadge } from "@/components/shared/language-badge";
-import { STATUS_LABELS, STATUS_COLORS } from "@/types";
 import { LeadActions } from "@/components/app/leads/lead-actions";
 import type { TranscriptMessage } from "@/types";
+
+export const dynamic = "force-dynamic";
+
+function isSafeUrl(url: string): boolean {
+  try {
+    const { protocol } = new URL(url);
+    return protocol === "https:" || protocol === "http:";
+  } catch {
+    return false;
+  }
+}
 
 export default async function LeadDetailPage({
   params,
@@ -124,8 +134,8 @@ export default async function LeadDetailPage({
         <div className="bg-white border border-[#e2e8f0] rounded-xl p-6">
           <h2 className="text-sm font-semibold text-[#0f172a] mb-4">Photos</h2>
           <div className="grid grid-cols-3 gap-3">
-            {(lead.photoUrls as string[]).map((url: string, i: number) => (
-              <a key={i} href={url} target="_blank" rel="noreferrer">
+            {(lead.photoUrls as string[]).filter(isSafeUrl).map((url: string, i: number) => (
+              <a key={i} href={url} target="_blank" rel="noreferrer noopener">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={url}

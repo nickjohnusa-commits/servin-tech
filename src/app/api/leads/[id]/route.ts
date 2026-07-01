@@ -23,17 +23,22 @@ export async function GET(
   const { orgId } = await auth();
   if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const org = await db.organization.findUnique({ where: { clerkOrgId: orgId } });
-  if (!org) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  try {
+    const org = await db.organization.findUnique({ where: { clerkOrgId: orgId } });
+    if (!org) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const { id } = await params;
-  const lead = await db.lead.findFirst({
-    where: { id, organizationId: org.id },
-    include: { conversations: true, followUps: true },
-  });
+    const { id } = await params;
+    const lead = await db.lead.findFirst({
+      where: { id, organizationId: org.id },
+      include: { conversations: true, followUps: true },
+    });
 
-  if (!lead) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(lead);
+    if (!lead) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(lead);
+  } catch (err) {
+    console.error("[leads/GET] error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }
 
 export async function PATCH(
@@ -44,41 +49,41 @@ export async function PATCH(
   if (!userId || !orgId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const org = await db.organization.findUnique({ where: { clerkOrgId: orgId } });
-  if (!org) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  try {
+    const org = await db.organization.findUnique({ where: { clerkOrgId: orgId } });
+    if (!org) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const { id } = await params;
-  const existing = await db.lead.findFirst({ where: { id, organizationId: org.id } });
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { id } = await params;
+    const existing = await db.lead.findFirst({ where: { id, organizationId: org.id } });
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const body = await req.json();
-  const parsed = schema.safeParse(body);
-  if (!parsed.success)
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    const body = await req.json();
+    const parsed = schema.safeParse(body);
+    if (!parsed.success)
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const lead = await db.lead.update({
-    where: { id },
-    data: parsed.data,
-  });
-
-  // Fire follow-up sequence when status moves to ESTIMATE_SENT
-  if (
-    parsed.data.status === "ESTIMATE_SENT" &&
-    existing.status !== "ESTIMATE_SENT"
-  ) {
-    await inngest.send({
-      name: "lead/estimate-sent",
-      data: { leadId: lead.id, organizationId: org.id },
+    const lead = await db.lead.update({
+      where: { id },
+      data: parsed.data,
     });
-  }
 
-  // Cancel follow-ups if WON or LOST
-  if (parsed.data.status === "WON" || parsed.data.status === "LOST") {
-    await db.followUp.updateMany({
-      where: { leadId: id, status: "PENDING" },
-      data: { status: "CANCELED" },
-    });
-  }
+    if (parsed.data.status === "ESTIMATE_SENT" && existing.status !== "ESTIMATE_SENT") {
+      await inngest.send({
+        name: "lead/estimate-sent",
+        data: { leadId: lead.id, organizationId: org.id },
+      });
+    }
 
-  return NextResponse.json(lead);
+    if (parsed.data.status === "WON" || parsed.data.status === "LOST") {
+      await db.followUp.updateMany({
+        where: { leadId: id, status: "PENDING" },
+        data: { status: "CANCELED" },
+      });
+    }
+
+    return NextResponse.json(lead);
+  } catch (err) {
+    console.error("[leads/PATCH] error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

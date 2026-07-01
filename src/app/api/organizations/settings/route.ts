@@ -21,10 +21,14 @@ export async function GET() {
   if (!userId || !orgId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const org = await db.organization.findUnique({ where: { clerkOrgId: orgId } });
-  if (!org) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  return NextResponse.json(org);
+  try {
+    const org = await db.organization.findUnique({ where: { clerkOrgId: orgId } });
+    if (!org) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(org);
+  } catch (err) {
+    console.error("[settings/GET] error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }
 
 export async function PATCH(req: Request) {
@@ -39,10 +43,14 @@ export async function PATCH(req: Request) {
   if (!parsed.success)
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const org = await db.organization.update({
-    where: { clerkOrgId: orgId },
-    data: parsed.data,
-  });
-
-  return NextResponse.json(org);
+  try {
+    const org = await db.organization.update({
+      where: { clerkOrgId: orgId },
+      data: parsed.data,
+    });
+    return NextResponse.json(org);
+  } catch (err) {
+    console.error("[settings/PATCH] error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

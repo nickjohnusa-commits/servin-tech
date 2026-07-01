@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Invite failed";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[invite/POST] error:", err);
+    return NextResponse.json({ error: "Failed to send invitation" }, { status: 500 });
   }
 }

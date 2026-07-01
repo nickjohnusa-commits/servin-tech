@@ -21,10 +21,14 @@ export async function POST(req: Request) {
 
   const { businessName, timezone } = parsed.data;
 
-  await db.organization.update({
-    where: { clerkOrgId: orgId },
-    data: { businessName, timezone },
-  });
-
-  return NextResponse.json({ ok: true });
+  try {
+    await db.organization.update({
+      where: { clerkOrgId: orgId },
+      data: { businessName, timezone },
+    });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[setup/POST] error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

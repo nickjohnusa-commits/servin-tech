@@ -70,59 +70,57 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
-  switch (event.type) {
-    case "user.created": {
-      const { id, first_name, last_name, email_addresses } = event.data;
-      const email = email_addresses[0]?.email_address ?? "";
-      const name = [first_name, last_name].filter(Boolean).join(" ") || email;
-      // User row will be created when they join an org via membership event
-      // Just log for now — org membership is the authoritative user-org link
-      console.log(`Clerk user created: ${id} (${email}) name=${name}`);
-      break;
-    }
+  try {
+    switch (event.type) {
+      case "user.created":
+        // User row is created on membership event — nothing to do here
+        break;
 
-    case "organization.created": {
-      const { id, name, slug, created_by } = event.data;
-      await db.organization.upsert({
-        where: { clerkOrgId: id },
-        create: { clerkOrgId: id, name, slug, businessName: name },
-        update: { name, slug },
-      });
-      console.log(`Org created: ${id} by ${created_by}`);
-      break;
-    }
+      case "organization.created": {
+        const { id, name, slug } = event.data;
+        await db.organization.upsert({
+          where: { clerkOrgId: id },
+          create: { clerkOrgId: id, name, slug, businessName: name },
+          update: { name, slug },
+        });
+        break;
+      }
 
-    case "organizationMembership.created": {
-      const { organization, public_user_data, role } = event.data;
-      const org = await db.organization.findUnique({
-        where: { clerkOrgId: organization.id },
-      });
-      if (!org) break;
+      case "organizationMembership.created": {
+        const { organization, public_user_data, role } = event.data;
+        const org = await db.organization.findUnique({
+          where: { clerkOrgId: organization.id },
+        });
+        if (!org) break;
 
-      await db.user.upsert({
-        where: { clerkUserId: public_user_data.user_id },
-        create: {
-          clerkUserId: public_user_data.user_id,
-          organizationId: org.id,
-          role: role === "org:admin" ? "OWNER" : "DISPATCHER",
-          name: public_user_data.user_id,
-          email: "",
-        },
-        update: {
-          organizationId: org.id,
-          role: role === "org:admin" ? "OWNER" : "DISPATCHER",
-        },
-      });
-      break;
-    }
+        await db.user.upsert({
+          where: { clerkUserId: public_user_data.user_id },
+          create: {
+            clerkUserId: public_user_data.user_id,
+            organizationId: org.id,
+            role: role === "org:admin" ? "OWNER" : "DISPATCHER",
+            name: public_user_data.user_id,
+            email: "",
+          },
+          update: {
+            organizationId: org.id,
+            role: role === "org:admin" ? "OWNER" : "DISPATCHER",
+          },
+        });
+        break;
+      }
 
-    case "organizationMembership.deleted": {
-      const { public_user_data } = event.data;
-      await db.user
-        .delete({ where: { clerkUserId: public_user_data.user_id } })
-        .catch(() => null);
-      break;
+      case "organizationMembership.deleted": {
+        const { public_user_data } = event.data;
+        await db.user
+          .delete({ where: { clerkUserId: public_user_data.user_id } })
+          .catch(() => null);
+        break;
+      }
     }
+  } catch (err) {
+    console.error("[clerk/webhook] error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

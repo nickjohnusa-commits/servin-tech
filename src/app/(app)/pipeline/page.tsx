@@ -1,6 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 import { PipelineBoard } from "@/components/app/pipeline/pipeline-board";
 import type { Lead } from "@/types";
 

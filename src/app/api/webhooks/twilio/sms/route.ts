@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { validateTwilioSignature } from "@/lib/twilio";
 import {
@@ -8,6 +7,9 @@ import {
   type SmsConversation,
 } from "@/lib/ai/sms-handler";
 import { inngest } from "@/lib/inngest/client";
+
+const XML_EMPTY = `<?xml version="1.0" encoding="UTF-8"?><Response></Response>`;
+const XML_HEADERS = { "Content-Type": "text/xml" };
 
 export async function POST(req: Request) {
   const url = new URL(req.url);
@@ -22,103 +24,99 @@ export async function POST(req: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const toNumber = params["To"];
-  const fromNumber = params["From"];
-  const body = params["Body"] ?? "";
+  try {
+    const toNumber = params["To"];
+    const fromNumber = params["From"];
+    const body = params["Body"] ?? "";
 
-  const org = await db.organization.findUnique({
-    where: { twilioPhoneNumber: toNumber },
-  });
+    const org = await db.organization.findUnique({
+      where: { twilioPhoneNumber: toNumber },
+    });
 
-  if (!org || org.subscriptionStatus === "CANCELED") {
-    return new Response(
-      `<?xml version="1.0" encoding="UTF-8"?><Response></Response>`,
-      { headers: { "Content-Type": "text/xml" } }
+    if (!org || org.subscriptionStatus === "CANCELED") {
+      return new Response(XML_EMPTY, { headers: XML_HEADERS });
+    }
+
+    const existingConversation = await db.conversation.findFirst({
+      where: {
+        organizationId: org.id,
+        channel: "SMS",
+        lead: { callerPhone: fromNumber, status: "NEW" },
+      },
+      include: { lead: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    let conversationState: SmsConversation;
+    let leadId: string | null = null;
+
+    if (existingConversation?.transcript && Array.isArray(existingConversation.transcript)) {
+      conversationState = {
+        state: "GREETING",
+        language: "AUTO",
+        transcript: existingConversation.transcript as SmsConversation["transcript"],
+        collectedData: {},
+      };
+      leadId = existingConversation.leadId;
+    } else {
+      conversationState = createNewConversation();
+    }
+
+    const { reply, conversation: updatedState, isComplete } = await processMessage(
+      conversationState,
+      body,
+      org.businessName
     );
-  }
 
-  // Load or create SMS conversation state
-  const existingConversation = await db.conversation.findFirst({
-    where: {
-      organizationId: org.id,
-      channel: "SMS",
-      lead: { callerPhone: fromNumber, status: "NEW" },
-    },
-    include: { lead: true },
-    orderBy: { createdAt: "desc" },
-  });
+    if (isComplete && !leadId) {
+      const summary = await generateAiSummary(updatedState, org.businessName);
 
-  let conversationState: SmsConversation;
-  let leadId: string | null = null;
+      const lead = await db.lead.create({
+        data: {
+          organizationId: org.id,
+          callerPhone: fromNumber,
+          channel: "SMS",
+          languageDetected: updatedState.language === "AUTO" ? "EN" : updatedState.language,
+          jobType: updatedState.collectedData.jobType,
+          urgency: updatedState.collectedData.urgency,
+          address: updatedState.collectedData.address,
+          budgetRange: updatedState.collectedData.budgetRange,
+          preferredAppointment: updatedState.collectedData.preferredAppointment,
+          aiSummary: summary,
+          testLead: org.testMode,
+        },
+      });
 
-  if (
-    existingConversation?.transcript &&
-    Array.isArray(existingConversation.transcript)
-  ) {
-    conversationState = {
-      state: "GREETING",
-      language: "AUTO",
-      transcript: existingConversation.transcript as SmsConversation["transcript"],
-      collectedData: {},
-    };
-    leadId = existingConversation.leadId;
-  } else {
-    conversationState = createNewConversation();
-  }
+      leadId = lead.id;
 
-  const { reply, conversation: updatedState, isComplete } = await processMessage(
-    conversationState,
-    body,
-    org.businessName
-  );
+      await db.conversation.create({
+        data: {
+          leadId: lead.id,
+          organizationId: org.id,
+          channel: "SMS",
+          transcript: updatedState.transcript,
+        },
+      });
 
-  if (isComplete && !leadId) {
-    const summary = await generateAiSummary(updatedState, org.businessName);
+      await inngest.send({
+        name: "lead/created",
+        data: { leadId: lead.id, organizationId: org.id },
+      });
+    } else if (leadId) {
+      await db.conversation.updateMany({
+        where: { leadId, channel: "SMS" },
+        data: { transcript: updatedState.transcript },
+      });
+    }
 
-    const lead = await db.lead.create({
-      data: {
-        organizationId: org.id,
-        callerPhone: fromNumber,
-        channel: "SMS",
-        languageDetected: updatedState.language === "AUTO" ? "EN" : updatedState.language,
-        jobType: updatedState.collectedData.jobType,
-        urgency: updatedState.collectedData.urgency,
-        address: updatedState.collectedData.address,
-        budgetRange: updatedState.collectedData.budgetRange,
-        preferredAppointment: updatedState.collectedData.preferredAppointment,
-        aiSummary: summary,
-        testLead: org.testMode,
-      },
-    });
-
-    leadId = lead.id;
-
-    await db.conversation.create({
-      data: {
-        leadId: lead.id,
-        organizationId: org.id,
-        channel: "SMS",
-        transcript: updatedState.transcript,
-      },
-    });
-
-    await inngest.send({
-      name: "lead/created",
-      data: { leadId: lead.id, organizationId: org.id },
-    });
-  } else if (leadId) {
-    await db.conversation.updateMany({
-      where: { leadId, channel: "SMS" },
-      data: { transcript: updatedState.transcript },
-    });
-  }
-
-  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Message>${reply.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</Message>
 </Response>`;
 
-  return new Response(twiml, {
-    headers: { "Content-Type": "text/xml" },
-  });
+    return new Response(twiml, { headers: XML_HEADERS });
+  } catch (err) {
+    console.error("[twilio/sms] error:", err);
+    return new Response(XML_EMPTY, { headers: XML_HEADERS });
+  }
 }

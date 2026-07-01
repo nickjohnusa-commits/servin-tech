@@ -30,6 +30,10 @@ export const notifyOwner = inngest.createFunction(
         sendSms(phone, org.twilioPhoneNumber!, smsBody, false)
       )
     );
+    smsResults.forEach((r, i) => {
+      if (r.status === "rejected")
+        console.error(`[notify-owner] SMS to ${org.notificationPhones[i]} failed:`, r.reason);
+    });
 
     const emailResults = await Promise.allSettled(
       org.notificationEmails.map((email: string) =>
@@ -52,6 +56,10 @@ export const notifyOwner = inngest.createFunction(
         })
       )
     );
+    emailResults.forEach((r, i) => {
+      if (r.status === "rejected")
+        console.error(`[notify-owner] Email to ${org.notificationEmails[i]} failed:`, r.reason);
+    });
 
     return {
       leadId,

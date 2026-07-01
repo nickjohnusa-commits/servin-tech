@@ -3,6 +3,10 @@ import { db } from "@/lib/db";
 import { sendSms } from "@/lib/twilio";
 import { resend, FROM_EMAIL } from "@/lib/resend";
 
+function sanitizeSms(text: string): string {
+  return text.replace(/[\n\r\t]/g, " ").slice(0, 150);
+}
+
 export const followUpSequence = inngest.createFunction(
   {
     id: "follow-up-sequence",
@@ -39,8 +43,8 @@ export const followUpSequence = inngest.createFunction(
       }
 
       const isEs = current.languageDetected === "ES";
-      const name = current.callerName ?? (isEs ? "cliente" : "there");
-      const job = current.jobType ?? (isEs ? "su servicio" : "your service request");
+      const name = sanitizeSms(current.callerName ?? (isEs ? "cliente" : "there"));
+      const job = sanitizeSms(current.jobType ?? (isEs ? "su servicio" : "your service request"));
 
       let message: string;
       if (day === days[0]) {
@@ -57,11 +61,15 @@ export const followUpSequence = inngest.createFunction(
           : `Hi ${name}, last note from ${org.businessName}. If you still need help with ${job}, we'd love to earn your business. Have a great day!`;
       }
 
-      await Promise.allSettled(
+      const smsResults = await Promise.allSettled(
         [org.twilioPhoneNumber].filter(Boolean).map(() =>
           sendSms(current.callerPhone, org.twilioPhoneNumber!, message, false)
         )
       );
+      smsResults.forEach((r) => {
+        if (r.status === "rejected")
+          console.error(`[follow-up] SMS to ${current.callerPhone} day ${day} failed:`, r.reason);
+      });
 
       if (day === days[1] && org.notificationEmails.length > 0) {
         await resend.emails.send({

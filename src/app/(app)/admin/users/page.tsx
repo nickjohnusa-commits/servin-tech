@@ -2,6 +2,8 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 const ADMIN_EMAIL = "nickjohnusa@gmail.com";
 
 const TIER_COLORS: Record<string, string> = {

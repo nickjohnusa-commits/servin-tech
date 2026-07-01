@@ -1,6 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 import { formatRelative, urgencyColor } from "@/lib/utils";
 import { LanguageBadge } from "@/components/shared/language-badge";
 import { STATUS_LABELS, STATUS_COLORS } from "@/types";

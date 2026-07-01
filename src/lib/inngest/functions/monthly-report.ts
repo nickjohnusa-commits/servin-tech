@@ -19,11 +19,16 @@ export const monthlyReport = inngest.createFunction(
       },
     });
 
-    const results = await Promise.allSettled(
-      orgs
-        .filter((org: { notificationEmails: string[] }) => org.notificationEmails.length > 0)
-        .map((org: { id: string }) => generateAndSendReport(org.id, month, year))
+    const activeOrgs = orgs.filter(
+      (org: { notificationEmails: string[] }) => org.notificationEmails.length > 0
     );
+    const results = await Promise.allSettled(
+      activeOrgs.map((org: { id: string }) => generateAndSendReport(org.id, month, year))
+    );
+    results.forEach((r, i) => {
+      if (r.status === "rejected")
+        console.error(`[monthly-report] org ${activeOrgs[i].id} failed:`, r.reason);
+    });
 
     return {
       processed: orgs.length,
