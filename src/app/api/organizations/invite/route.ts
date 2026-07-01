@@ -1,10 +1,12 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { isSameOrigin, csrfError } from "@/lib/csrf";
 import { z } from "zod";
 
 const schema = z.object({ email: z.string().email() });
 
 export async function POST(req: Request) {
+  if (!isSameOrigin(req)) return csrfError();
   const { userId, orgId, orgRole } = await auth();
   if (!userId || !orgId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

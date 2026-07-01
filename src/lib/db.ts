@@ -3,7 +3,9 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 
 function createPrismaClient() {
-  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL! });
+  const pool = new pg.Pool({
+    connectionString: process.env.DATABASE_URL || "postgresql://placeholder:5432/placeholder",
+  });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });
 }

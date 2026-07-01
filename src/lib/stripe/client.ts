@@ -1,10 +1,11 @@
 import Stripe from "stripe";
+import { getEnv } from "@/lib/env";
 
 let _stripe: Stripe | null = null;
 
 export function getStripe(): Stripe {
   if (!_stripe) {
-    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    _stripe = new Stripe(getEnv("STRIPE_SECRET_KEY"), {
       apiVersion: "2026-05-27.dahlia",
     });
   }
@@ -14,7 +15,7 @@ export function getStripe(): Stripe {
 export const PLANS = {
   STARTER: {
     name: "Starter",
-    priceId: process.env.STRIPE_PRICE_STARTER!,
+    priceId: process.env.STRIPE_PRICE_STARTER ?? "",
     price: 149,
     features: [
       "1 AI phone number",
@@ -28,7 +29,7 @@ export const PLANS = {
   },
   PROFESSIONAL: {
     name: "Professional",
-    priceId: process.env.STRIPE_PRICE_PROFESSIONAL!,
+    priceId: process.env.STRIPE_PRICE_PROFESSIONAL ?? "",
     price: 299,
     features: [
       "Everything in Starter",
@@ -40,7 +41,7 @@ export const PLANS = {
   },
   AGENCY: {
     name: "Agency",
-    priceId: process.env.STRIPE_PRICE_AGENCY!,
+    priceId: process.env.STRIPE_PRICE_AGENCY ?? "",
     price: 499,
     features: [
       "Everything in Professional",

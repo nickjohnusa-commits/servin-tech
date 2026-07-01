@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_EMAIL = "nickjohnusa@gmail.com";
+const ADMIN_EMAIL = process.env.PLATFORM_ADMIN_EMAIL ?? "";
 
 const TIER_COLORS: Record<string, string> = {
   STARTER: "bg-[#f1f5f9] text-[#475569]",

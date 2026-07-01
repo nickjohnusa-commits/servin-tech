@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getStripe, PLANS } from "@/lib/stripe/client";
+import { isSameOrigin, csrfError } from "@/lib/csrf";
 import { z } from "zod";
 
 const schema = z.object({
@@ -9,6 +10,7 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
+  if (!isSameOrigin(req)) return csrfError();
   const { userId, orgId, orgRole } = await auth();
   if (!userId || !orgId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

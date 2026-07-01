@@ -57,7 +57,9 @@ export async function POST(req: Request) {
   }
 
   const payload = await req.text();
-  const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET!);
+  const secret = process.env.CLERK_WEBHOOK_SECRET;
+  if (!secret) return NextResponse.json({ error: "Misconfigured" }, { status: 500 });
+  const wh = new Webhook(secret);
 
   let event: WebhookEvent;
   try {

@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { inngest } from "@/lib/inngest/client";
+import { isSameOrigin, csrfError } from "@/lib/csrf";
 import { z } from "zod";
 
 const schema = z.object({
@@ -45,6 +46,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!isSameOrigin(req)) return csrfError();
   const { userId, orgId } = await auth();
   if (!userId || !orgId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

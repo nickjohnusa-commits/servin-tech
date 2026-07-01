@@ -84,6 +84,9 @@ model Lead {
   @@index([organizationId])
   @@index([status])
   @@index([createdAt])
+  @@index([organizationId, testLead])
+  @@index([organizationId, callerPhone])
+  @@index([organizationId, status, createdAt])
   @@map("leads")
 }
 
